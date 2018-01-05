@@ -7,6 +7,7 @@ open Interp
 open Typer
 
 let filename = ref "main.pil"
+let typing_only = ref false
 
 let error_loc pos =
   let line = pos.pos_lnum in
@@ -22,7 +23,8 @@ let usage_msg = "Usage: ./inter [option]"
 let args = 
         [
                 ("--version", Unit(print_version), "\tPrint version number and exit.");
-                ("--input", String(function s -> filename := s), "\tSpecify the input file.")
+                ("--input", String(function s -> filename := s), "\tSpecify the input file.");
+                ("--type-only", Unit(fun _ -> typing_only := true), "\tStop the compilation process after the typing phase.")
         ]
 
 
@@ -38,13 +40,16 @@ let () =
         let p = Parser.file Lexer.token buf in 
         close_in f;
         let _ = type_pi_lambda_expr p in
+        if !typing_only then
         let reduced = type_pi_lambda_expr (reduce p) in
         let term_string = term_string_of_tast reduced in
         output_string stdout (term_string^"\n\t: "^(print_type reduced.typ)^"\n")
+
         with
         | Parser.Error ->
                 error_loc (Lexing.lexeme_start_p buf);
-                eprintf "Syntax error\n@?";
+                eprintf "Syntax error\n@?"; exit 1
+        | Typer.UnificationError s -> print_string s; exit 2
+        | Typer.ChannelLeakError s -> print_string s; exit 3
         | Interp.ApplicationError(loc, t1, t2) ->
-                        print_string ("Can not apply term\n\n" ^ (string_of_ast t2) ^"\n to the term\n\n"^(string_of_ast t1));
-        exit 1;
+                        print_string ("Can not apply term\n\n" ^ (string_of_ast t2) ^"\n to the term\n\n"^(string_of_ast t1)); exit 4;

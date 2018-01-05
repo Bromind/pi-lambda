@@ -1,3 +1,3 @@
-channel_leak 3
-typing_fail 2
-typing_success 0
+channel_leak 3 --type-only
+typing_fail 2 --type-only
+typing_success 0 --type-only

@@ -2,7 +2,7 @@
 # Author: Martin Vassor
 # Description: Script to run the tests of the pi-lambda project
 # Creation date: 05-01-2018
-# Last modified: sam. 06 janv. 2018 00:09:41 CET
+# Last modified: sam. 06 janv. 2018 00:31:32 CET
 # Known bugs: 
 
 print_help() {
@@ -21,8 +21,9 @@ fi
 while read p; do
 	TEST_FOLDER="$(echo $p | cut -d ' ' -f1 -)"
 	EXPECTED_RETURN="$(echo $p | cut -d ' ' -f2 -)"
+	COMP_OPT="$(echo $p | cut -d ' ' -f3- -)"
 	for i in $TEST_FOLDER/*; do
-		../inter --input "$i" 1>/dev/null 2>/dev/null
+		../inter $COMP_OPT --input "$i" 1>/dev/null 2>/dev/null
 		RETURNED="$?"
 		if [ $RETURNED -ne $EXPECTED_RETURN ]; then 
 			echo "In file: $i, expected return value $EXPECTED_RETURN but got $RETURNED"
@@ -52,7 +53,7 @@ fi
 
 Given a test_table file, execute all tests and prints the number of errors.
 
-A test_table is a file containing two columns: in the first column is the name of a test subfolder and in the second column is the returned value expected for all test cases in the subfolder.
+A test_table is a file containing three columns: in the first column is the name of a test subfolder, in the second column is the returned value expected for all test cases in the subfolder. The last command is the option passed to the compiler.
 
 =head1 AUTHOR
 
