@@ -16,9 +16,17 @@
 # release α-0.2 - An extended release
 
 - [ ] User defined types
+    + [✓] UnificationError: type church: ((a -> a) -> (a -> a)). \a -> \b -> ((church) (a)) (b)
+    + [✓] Single constructor, easy types
+    + [ ] All types
+      * [ ] channel type: `type typ: (<a^0, b^1> -> b^1)`, used like #u. \v -> ((typ) (u)) (v)
+      * [ ] parallel type: `type typ: [ a^0 x b^0 ]`
+    + [ ] Multiple constructors
+    + [ ] Detect when a result type match a defined type
+    + [ ] Merge Tdot & Tchan together ??
 - [ ] Standard data types defined
-- [ ] Change version name
 - [ ] Recursive functions
+- [ ] Change version name
 
 # release α-0.3 - An named release
 

@@ -12,12 +12,16 @@ LEXER=ocamllex $(LFLAGS)
 PFLAGS=-v --dump --explain --graph
 PARSER=menhir $(PFLAGS)
 
-all: repl inter 
+all: repl inter test
+
 repl: $(CMO) repl.cmo
 	$(COMPILER) -o $@ $(CLIBS) $(CMO) repl.cmo
 
 inter: $(CMO) main.cmo
 	$(COMPILER) -o $@ $(CLIBS) $(CMO) main.cmo
+
+test: inter tests/test_table tests/test.sh
+	cd tests; (./test.sh && cd ..) || (cd .. && exit 1)
 
 .SUFFIXES: .mli .ml .cmi .cmo .mll .mly 
 .mli.cmi:
