@@ -1,0 +1,11 @@
+
+
+type my_type:
+| constr1: (a^0 -> a^0)
+| constr2: a^0
+| constr3: .
+
+type mt2: mt2.
+type mt3: mt3.
+
+((constr1) (mt2)) (mt3)
