@@ -1,5 +1,5 @@
 
-CMO=config.cmo constructors.cmo channel.cmo pi_lambda_types.cmo ast.cmo lexer.cmo typer.cmo parser.cmo interp.cmo 
+CMO=config.cmo identifier.cmo channel.cmo pi_lambda_types.cmo constructor.cmo ast.cmo lexer.cmo typer.cmo parser.cmo interp.cmo 
 GENERATED=lexer.ml parser.ml parser.mli
 
 CFLAGS=-g -thread

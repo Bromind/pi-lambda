@@ -1,0 +1,9 @@
+type my_type:
+| constr1: (a^0 -> a^0)
+| constr2: a^0
+| constr3.
+
+type my_type2:
+| bla.
+
+[ bla || constr3 || (constr2) (bla) ]

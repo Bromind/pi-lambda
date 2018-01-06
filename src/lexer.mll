@@ -33,6 +33,7 @@
         | TYPE -> "TYPE "
         | COLON -> "COLON "
         | CIRCUMDEPTH d -> "CIRCUMDEPTH(" ^ (string_of_int d) ^ ") "
+        | BAR -> "BAR "
 }
 
 let lowercaseLetter = [ 'a' - 'z' ]
@@ -57,6 +58,7 @@ rule token = parse
 | "("           { LPARENS }
 | ")"           { RPARENS }
 | "||"          { PARA }
+| "|"           { BAR }
 | "["           { LSB }
 | "]"           { RSB }
 | ">"           { GT }

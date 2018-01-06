@@ -43,7 +43,7 @@
 
 %token <string> IDENT
 %token <int> CIRCUMDEPTH
-%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON 
+%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR
 
 %start file
 %type <Ast.expr> file
@@ -61,8 +61,8 @@ file:
 program: 
 | LAMBDA id=IDENT ARROW e=program
         { { exp = E_lambda(id, e); loc = ($startpos, $endpos)} }
-| TYPE ; type_name = IDENT ; COLON ; f = type_def ; DOT; p = program
-        { {exp = E_type (type_name, f, p); loc = ($startpos, $endpos)} }
+| TYPE ; type_name = IDENT ; COLON ; BAR?; cl = separated_nonempty_list(BAR, constructor) ; DOT; p = program
+        { {exp = E_type (type_name, List.map (fun cf -> cf type_name) cl, p); loc = ($startpos, $endpos)} }
 | p_abs=parens_program p_arg = parens_program
         { { exp = E_app(p_abs, p_arg); loc = ($startpos, $endpos)} }
 | LSB local_progs = separated_nonempty_list(PARA, program) RSB
@@ -80,6 +80,15 @@ program:
 ;
 
 
+constructor:
+| constructor_name = IDENT; COLON?; constructor_type = type_def?
+        { 
+                match constructor_type with
+                | Some t -> fun s -> (constructor_name, Tarrow(t, Tname (s)))
+                | None -> fun s ->(constructor_name, Tname(s)) 
+        }
+;
+
 type_def:
 | id = IDENT; depth = CIRCUMDEPTH
         { get_tvar_from_name id depth }
@@ -87,6 +96,7 @@ type_def:
         { Tarrow (t1, t2) }
 | LT; chan = IDENT; depth = CIRCUMDEPTH; COMMA; chan_type = type_def; GT; 
         { get_cvar_from_name chan depth chan_type }
+;
 
 parens_program:
         LPARENS ; p = program ; RPARENS
