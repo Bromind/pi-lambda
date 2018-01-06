@@ -117,7 +117,7 @@ match type_val t1, type_val t2 with
                 (unify_outer targ1 targ2); (unify_inner tbody1 tbody2)
 | _ -> unify t1 t2
 
-exception ChannelLeakError of string
+exception ChannelLeakError of ident option * depth * ident option * depth * loc option
 
 let rec free_names tast: Ast.ident list = 
 let filter var = fun n -> var != n in 
@@ -172,7 +172,7 @@ match tast with
                 | Some ic -> 
                         if i.chan_depth <= ic 
                         then 
-                                raise (ChannelLeakError "A channel leaks")
+                                raise (ChannelLeakError (None, i.chan_depth, None, ic, None))
                         else 
                                 ()
                 end
@@ -277,7 +277,16 @@ match expr.exp with
                 
                 (*  e.g. #c. c[\b->b].c *)
                 let free_names_msg = free_names typed_msg in
-                let most_inner_free_name_depth = List.fold_left (Pervasives.max) 0 (List.map (fun n -> depth_of (find n env)) free_names_msg) in
+                let most_inner_free_name, most_inner_free_name_depth = 
+                        List.fold_left 
+                                (fun (a, b) (a', b') ->
+                                        if Pervasives.max b b' = b
+                                        then (a, b)
+                                        else (a', b')
+                                ) 
+                                ("", 0)
+                                (List.map (fun n -> (n, depth_of (find n env))) free_names_msg) 
+                in
                 let chan_type = 
                         match find chan env with
                         | (Tchan _) as t -> t
@@ -287,7 +296,7 @@ match expr.exp with
                 in
                 if (depth_of chan_type) <= most_inner_free_name_depth
                 then
-                        raise (ChannelLeakError "A channel leaks")
+                        raise (ChannelLeakError (Some chan, depth_of chan_type, Some most_inner_free_name, most_inner_free_name_depth, Some expr.loc))
                 else
                         let typed_cont = type_pi_lambda_expr_aux env depth cont in
                         let _ = unify_inner (channel_type chan_type) typed_msg.typ in

@@ -1,4 +1,6 @@
 
+type depth = int
+
 exception TypeError of string
 type pi_lambda_type =
 | Tvar of tvar
@@ -12,13 +14,13 @@ type pi_lambda_type =
 and chan_id = 
         {
                 chan_id: id;
-                mutable chan_depth: int
+                mutable chan_depth: depth
         }
 
 and tvar =
         {
                 var_id: id;
-                mutable var_depth: int;
+                mutable var_depth: depth;
                 mutable var_type: pi_lambda_type option
         }
 and id = 

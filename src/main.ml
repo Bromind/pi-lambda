@@ -14,6 +14,13 @@ let error_loc pos =
   let line = pos.pos_lnum in
   let col = pos.pos_cnum-pos.pos_bol + 1 in
   eprintf "File \"%s\", line %d, characters %d-%d:\n" !filename line (col-1) col
+
+let string_of_loc (bpos, epos) = 
+        "File \"" ^ !filename
+        ^ "\", from line " ^ (string_of_int bpos.pos_lnum)
+        ^ " character " ^ (string_of_int bpos.pos_cnum)
+        ^ " to line " ^ (string_of_int epos.pos_lnum)
+        ^ " character " ^ (string_of_int epos.pos_cnum) ^ ": "
  
 let print_version () = print_string ("Version " ^ version ^ " - " ^ version_name ^ "\n"); exit 0
 
@@ -51,7 +58,24 @@ let () =
                 error_loc (Lexing.lexeme_start_p buf);
                 eprintf "Syntax error\n@?"; exit 1
         | Typer.UnificationError s -> print_string s; exit 2
-        | Typer.ChannelLeakError s -> print_string s; exit 3
+        | Typer.ChannelLeakError (name_chan, depth_chan, name_leak, depth_leak, loc) -> 
+                        let msg = 
+                                begin match loc with
+                                | Some loc -> string_of_loc loc
+                                | None -> "At unknown position, "
+                                end ^
+                                begin match name_chan with
+                                | Some n -> "channel " ^ n
+                                | None -> "unknown channel"
+                                end
+                                ^ " at depth " ^ (string_of_int depth_chan) ^ " leaks " ^
+                                begin match name_leak with
+                                | Some n -> "the identifier " ^ n
+                                | None -> "an unknown identifer"
+                                end
+                                ^ " at depth " ^ (string_of_int depth_leak)
+                        in
+                        prerr_endline msg; exit 3
         | Interp.ApplicationError(loc, t1, t2) ->
                         print_string ("Can not apply term\n\n" ^ (string_of_ast t2) ^"\n to the term\n\n"^(string_of_ast t1)); exit 4;
         | _ -> exit 5;
