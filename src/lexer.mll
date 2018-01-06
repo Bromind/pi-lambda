@@ -27,8 +27,12 @@
         | LSB -> "LSB "
         | RSB -> "RSB "
         | GT -> "GT "
-        | IDENT id -> "IDENT " ^ id ^ " "
+        | LT -> "LT "
+        | IDENT id -> "IDENT(" ^ id ^ ") "
         | EOF -> "EOF "
+        | TYPE -> "TYPE "
+        | COLON -> "COLON "
+        | CIRCUMDEPTH d -> "CIRCUMDEPTH(" ^ (string_of_int d) ^ ") "
 }
 
 let lowercaseLetter = [ 'a' - 'z' ]
@@ -44,19 +48,27 @@ let car = digit | letter | ' ' | '!' | '#' | '$' | '%' | '&' | ''' | '('
 let space = [' ' '\t']	
 
 rule token = parse
-        | '\n'          { newline lexbuf ; token lexbuf }
-        | "\\"          { LAMBDA }
-        | "#"           { CHAN }
-        | "->"          { ARROW }
-        | "."           { DOT }
-        | ","           { COMMA }
-        | "("           { LPARENS }
-        | ")"           { RPARENS }
-        | "||"          { PARA }
-        | "["           { LSB }
-        | "]"           { RSB }
-        | ">"           { GT }
-        | (ident as id) { IDENT id }
-        | space+        { token lexbuf }
-        | eof           { EOF }
+| '\n'          { newline lexbuf ; token lexbuf }
+| "\\"          { LAMBDA }
+| "#"           { CHAN }
+| "->"          { ARROW }
+| "."           { DOT }
+| ","           { COMMA }
+| "("           { LPARENS }
+| ")"           { RPARENS }
+| "||"          { PARA }
+| "["           { LSB }
+| "]"           { RSB }
+| ">"           { GT }
+| "<"           { LT }
+| "type"        { TYPE }
+| ':'           { COLON }
+| '^' (integer as i) { 
+        try (CIRCUMDEPTH (int_of_string i))
+        with
+        | _ -> raise (LexingError ("Can not get int of string: "^ i))
+}
+| (ident as id) { IDENT id }
+| space+        { token lexbuf }
+| eof           { EOF }
 

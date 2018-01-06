@@ -1,14 +1,16 @@
+open Pi_lambda_types
 open Ast
 open List
 open Channel
 open Event
+open Constructors
 
 exception RuntimeError 
 exception ApplicationError of loc * expr * expr
 exception NotImplementedError of loc * expr
 exception SubstitutionError of loc * ident * expr
 
-(** Substitute indent by term1 in term2*)
+(** Substitute ident by term1 in term2*)
 let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : expr = 
         let subs_in = substitute_free_variable ident term1 in
         match term2.exp with
@@ -35,23 +37,28 @@ let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : ex
                                 term2
                         else
                                 {exp = E_deliver (chan, var, subs_in expr); loc = term2.loc}
+        | E_type (constr_name, constr, prog) -> 
+                        if constr_name = ident then
+                                term2
+                        else
+                                {exp = E_type (ident, constr, subs_in prog); loc = term2.loc}
 
-let rec reduce_aux (chans: channels) (ast: expr): expr = 
+let rec reduce_aux (chans: channels) (constr: constructors) (ast: expr): expr = 
         match ast.exp with
-        | E_lambda (var, expr) -> ({ exp = E_lambda (var, reduce_aux chans expr); loc = ast.loc})
+        | E_lambda (var, expr) -> ({ exp = E_lambda (var, reduce_aux chans constr expr); loc = ast.loc})
         | E_ident _ -> ast
         | E_app (f, arg) ->
                         begin
-                                match (reduce_aux chans f).exp with
+                                match (reduce_aux chans constr f).exp with
                                 | E_lambda (var, expr) ->  
                                         (** Left reduction*)
-                                        reduce_aux chans (substitute_free_variable var arg expr)
-                                | _ -> {exp = E_app ((reduce_aux chans f), (reduce_aux chans arg)); loc = ast.loc}
+                                        reduce_aux chans constr (substitute_free_variable var arg expr)
+                                | _ -> {exp = E_app ((reduce_aux chans constr f), (reduce_aux chans constr arg)); loc = ast.loc}
                         end
         | E_para pl -> 
                         let reduce_process expr : expr event =
                                 let chan = new_channel () in 
-                                let job expr : unit= sync (send chan (reduce_aux chans expr)) in 
+                                let job expr : unit= sync (send chan (reduce_aux chans constr expr)) in 
                                 Thread.create job expr; receive chan
                         in
                         let events: expr event list = map reduce_process pl in
@@ -59,16 +66,21 @@ let rec reduce_aux (chans: channels) (ast: expr): expr =
                         
         | E_chan (var, expr) -> 
                         let new_channel = create_channel var in
-                        let reduced_expr = reduce_aux (new_channel :: chans) expr in
+                        let reduced_expr = reduce_aux (new_channel :: chans) constr expr in
                         {exp = E_chan (var, reduced_expr); loc = ast.loc}
         | E_send (chan, msg, cont) ->
                         Channel.send chans chan msg;
-                        reduce_aux chans cont
+                        reduce_aux chans constr cont
         | E_deliver (chan, var, expr) ->
-                        match deliver chans chan with
-                        | Some e -> reduce_aux chans (substitute_free_variable var e expr)
+                        begin match deliver chans chan with
+                        | Some e -> reduce_aux chans constr (substitute_free_variable var e expr)
                         | None -> ast (* TODO : mettre dans une file d'attente ?? *)
+                        end 
+        | E_type (constr_name, constr_def, prog) -> 
+                        let new_constrs = (constr_name, constr_def) :: constr in
+                        { exp = E_type(constr_name, constr_def, reduce_aux chans new_constrs prog);
+                        loc = ast.loc }
 
         
 let reduce (ast: expr): expr = 
-        reduce_aux [] ast
+        reduce_aux [] [] ast

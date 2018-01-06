@@ -1,4 +1,5 @@
 open Arg
+open Pi_lambda_types
 open Config
 open Ast
 open Lexing
@@ -53,3 +54,4 @@ let () =
         | Typer.ChannelLeakError s -> print_string s; exit 3
         | Interp.ApplicationError(loc, t1, t2) ->
                         print_string ("Can not apply term\n\n" ^ (string_of_ast t2) ^"\n to the term\n\n"^(string_of_ast t1)); exit 4;
+        | _ -> exit 5;

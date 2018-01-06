@@ -25,7 +25,7 @@ let read_input =
 let eval s = 
         let buf = Lexing.from_string s in
         let p = Parser.file Lexer.token buf in 
-        let tast = type_pi_lambda_expr p in
+        let _ = type_pi_lambda_expr p in
         let red_p = reduce p in
         let t_red_ast = type_pi_lambda_expr red_p in
         t_red_ast

@@ -1,6 +1,6 @@
+open Pi_lambda_types
 
 type loc = Lexing.position * Lexing.position
-
 type ident = string 
 
 type expr = {
@@ -15,7 +15,7 @@ and expr_tree =
 | E_chan of ident * expr
 | E_send of ident * expr * expr
 | E_deliver of ident * ident * expr
-
+| E_type of ident * pi_lambda_type * expr
 
 let rec depth_shift (depth: bool list) = 
 match depth with
@@ -63,6 +63,10 @@ let rec string_of_ast_aux (depth: bool list ) expr =
                                 ^ prefix ^ c ^ "\n"
                                 ^ prefix ^ v ^ "\n"
                                 ^ prefix ^ string_of_sub_ast_last e
+                | E_type (constr_name, constr_def, prog) -> 
+                                "type\n"
+                                ^ prefix ^ constr_name ^ " = " ^ (print_type constr_def) ^ "\n"
+                                ^ prefix ^ string_of_sub_ast_last prog
         in
         sub_tree_string  
 
