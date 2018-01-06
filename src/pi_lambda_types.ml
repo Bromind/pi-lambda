@@ -8,7 +8,7 @@ type pi_lambda_type =
 | Tcross of pi_lambda_type list
 | Tsend_chan of pi_lambda_type * pi_lambda_type
 | Tdeliver_chan of pi_lambda_type * pi_lambda_type
-| Ttype of string * pi_lambda_type * pi_lambda_type
+| Tname of type_name
 and chan_id = 
         {
                 chan_id: id;
@@ -21,6 +21,7 @@ and tvar =
                 mutable var_depth: int;
                 mutable var_type: pi_lambda_type option
         }
+and type_name = string
 and id = 
 | Named of string
 | Anonymous of int
@@ -52,6 +53,7 @@ match id with
 let rec type_val (t: pi_lambda_type): pi_lambda_type =
 match t with
 | Tvar {var_type = Some t} -> type_val t
+| Tname _
 | Tvar {var_type = None} -> t
 | Tchan (id, t) -> Tchan (id, type_val t)
 | Tarrow (t1, t2) -> Tarrow (type_val t1, type_val t2)
@@ -59,7 +61,6 @@ match t with
 | Tcross tl -> Tcross (List.map type_val tl)
 | Tsend_chan (t1, t2) -> Tsend_chan (type_val t1, type_val t2)
 | Tdeliver_chan (t1, t2) -> Tdeliver_chan (type_val t1, type_val t2)
-| Ttype (s, t_alias, t_prog) -> Ttype (s, type_val t_alias, type_val t_prog)
 
 let is_complexe_type t = 
 match t with
@@ -90,7 +91,7 @@ match t with
                 | [] -> "[]"
         in
         "["^(print_tl tl)^"]"
-| Ttype (s, t_alias, t_prog) -> print_type t_prog
+| Tname n -> n
 
 let channel_type c =
 match type_val c with
@@ -102,3 +103,22 @@ match t with
 | Tvar {var_depth = d} -> d
 | Tchan (i, t) -> i.chan_depth
 | _ -> raise (TypeError "Try to retrieve the depth of a non-var/non-depth type")
+
+(* Returns true iff variable v occurs in type t*)
+let rec occur v t = 
+        let occur_in_list l = 
+                List.fold_left (||) false (List.map (occur v) l)
+        in
+match t with 
+| Tvar w -> 
+                begin match w.var_type with
+                | None -> v.var_id = w.var_id
+                | Some subt -> v.var_id = w.var_id || occur v subt
+                end
+| Tarrow (t1, t2) 
+| Tdot (t1, t2)
+| Tsend_chan (t1, t2)
+| Tdeliver_chan (t1, t2) -> occur v t1 || occur v t2
+| Tchan (_, t) -> occur v t
+| Tcross tl -> occur_in_list tl
+| Tname _ -> false

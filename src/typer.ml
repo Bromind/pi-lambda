@@ -1,5 +1,7 @@
 open Ast
 open Pi_lambda_types
+open Identifier
+open Constructor
 
 exception NotImplemented of string
 
@@ -16,7 +18,7 @@ and typed_expr_tree =
 | T_chan of ident * typed_expr
 | T_send of ident * typed_expr * typed_expr
 | T_deliver of ident * ident * typed_expr
-| T_type of ident * pi_lambda_type * typed_expr
+| T_type of ident * constructor list * typed_expr
 
 
 type environment = (ident * pi_lambda_type) list
@@ -32,26 +34,6 @@ let rec find s env =
 match env with
 | (s_hd, t)::tl -> if s = s_hd then type_val t else find s tl
 | [] -> raise (VarNotFound ("Variable not found: " ^ s))
-
-(* Returns true iff variable v occurs in type t*)
-let rec occur v t = 
-        let occur_in_list l = 
-                List.fold_left (||) false (List.map (occur v) l)
-        in
-match t with 
-| Tvar w -> 
-                begin match w.var_type with
-                | None -> v.var_id = w.var_id
-                | Some subt -> v.var_id = w.var_id || occur v subt
-                end
-| Tarrow (t1, t2) 
-| Tdot (t1, t2)
-| Tsend_chan (t1, t2)
-| Tdeliver_chan (t1, t2) -> occur v t1 || occur v t2
-| Tchan (_, t) -> occur v t
-| Tcross tl -> occur_in_list tl
-| Ttype (s, t_alias, t_prog) -> occur v t_alias || occur v t_prog
-
 
 exception UnionError of string
 exception UnificationError of string
@@ -79,6 +61,7 @@ match type_val t1, type_val t2 with
 | Tchan _, Tchan _ -> raise (UnificationError "Can not unify two `Tchan`s, inner or outer unification must be specified")
 | Tvar _, _
 | _, Tvar _ -> union t1 t2
+| Tname n1, Tname n2 when n1 = n2 -> ()
 | _ -> raise (NotImplemented "unification")
  
 (* The most restricted channed *)
@@ -119,7 +102,7 @@ match type_val t1, type_val t2 with
 
 exception ChannelLeakError of string
 
-let rec free_names tast: Ast.ident list = 
+let rec free_names tast: ident list = 
 let filter var = fun n -> var != n in 
 match tast.texpr with
 | T_ident v -> [v]
@@ -150,7 +133,7 @@ let innermostChannel tast =
                         let t2_l = innerChannels t2 in
                         List.filter (fun elem -> List.exists (fun elem_t1 -> elem_t1 = elem) t1_l) t2_l
         | Tcross tl -> List.flatten(List.map innerChannels tl)
-        | Ttype (s, t_alias, t_prog) -> innerChannels t_prog
+        | Tname _ -> []
         in
         let rec innermost tl = 
         match tl with
@@ -182,10 +165,9 @@ match tast with
 | Tdeliver_chan(t1, t2)
 | Tdot (t1, t2) -> checkChannelLeak t1; checkChannelLeak t2
 | Tcross tl -> List.iter checkChannelLeak tl
-| Ttype (s, t_alias, t_prog) -> checkChannelLeak t_alias; (* This should never leaks, already verified in type_pi_lambda_expr_aux *)
-                        checkChannelLeak t_prog
+| Tname _ -> ()
 
-exception ErrorConstructorNotWellTyped of pi_lambda_type
+exception ErrorConstructorNotWellTyped of constructor list
 let rec type_pi_lambda_expr_aux (env: environment) (depth: int) (expr: expr): typed_expr =
 match expr.exp with
 | E_lambda (var, body) ->
@@ -320,19 +302,24 @@ match expr.exp with
                         loc = expr.loc;
                         typ = Tdeliver_chan(type_val chan_type, type_val typed_cont.typ)
                 }
-| E_type (type_name, type_def, prog) ->
+| E_type (type_name, constructors, prog) ->
                 begin
-                try checkChannelLeak type_def;
+                try List.iter (fun (_, typ) -> checkChannelLeak typ) constructors;
                 (* check for free type variables/free channels *)
-                let new_env = add type_name type_def env in
+                let new_env = 
+                        List.fold_left
+                        (fun env (constr_name, constr_typ) -> add constr_name constr_typ env)
+                        env
+                        constructors
+                in
                 let typed_prog = type_pi_lambda_expr_aux new_env depth prog in
                 {
-                        texpr = T_type(type_name, type_def, typed_prog);
+                        texpr = T_type(type_name, constructors, typed_prog);
                         loc = expr.loc;
-                        typ = Ttype(type_name, type_def, typed_prog.typ)
+                        typ = typed_prog.typ
                 }
                 with
-                | ChannelLeakError _ -> raise (ErrorConstructorNotWellTyped type_def)
+                | ChannelLeakError _ -> raise (ErrorConstructorNotWellTyped constructors)
                 end
 
 let type_pi_lambda_expr expr = 
@@ -379,9 +366,14 @@ let rec string_of_tast_aux (depth: bool list ) expr =
                                 ^ prefix ^ c ^ "\n"
                                 ^ prefix ^ v ^ "\n"
                                 ^ prefix ^ string_of_sub_ast_last e
-                | T_type (constr_name, constr_def, prog) -> 
-                                "type\n"
-                                ^ prefix ^ constr_name ^ " = " ^ (print_type constr_def) ^ "\n"
+                | T_type (type_name, constructors, prog) -> 
+                                let rec print_list l = 
+                                match l with
+                                | c :: lt -> prefix ^ string_of_constructor c ^ "\n" ^ (print_list lt)
+                                | [] -> ""
+                                in
+                                "type " ^ type_name ^ "\n"
+                                ^ print_list constructors
                                 ^ prefix ^ string_of_sub_ast_last prog
         in
         sub_tree_string  
@@ -400,5 +392,5 @@ match t.texpr with
 | T_chan (i, t) -> "#" ^ i ^ ". " ^ (term_string_of_tast t)
 | T_send (i, t1, t2) -> i ^ "[" ^ (term_string_of_tast t1) ^ "]." ^ (term_string_of_tast t2)
 | T_deliver (c, v, t) -> c ^ ", " ^ v ^ "> " ^ (term_string_of_tast t)
-| T_type (s, def, p) -> "type " ^ s ^ ": " ^ (print_type def) ^ ".\n" ^ (term_string_of_tast p)
+| T_type (s, def, p) -> "type " ^ s ^ ":\n" ^ (string_of_constructor_list def) ^ ".\n" ^ (term_string_of_tast p)
 

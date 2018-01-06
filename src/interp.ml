@@ -3,7 +3,8 @@ open Ast
 open List
 open Channel
 open Event
-open Constructors
+open Constructor
+open Identifier
 
 exception RuntimeError 
 exception ApplicationError of loc * expr * expr
@@ -43,7 +44,7 @@ let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : ex
                         else
                                 {exp = E_type (ident, constr, subs_in prog); loc = term2.loc}
 
-let rec reduce_aux (chans: channels) (constr: constructors) (ast: expr): expr = 
+let rec reduce_aux (chans: channels) (constr: constructor list) (ast: expr): expr = 
         match ast.exp with
         | E_lambda (var, expr) -> ({ exp = E_lambda (var, reduce_aux chans constr expr); loc = ast.loc})
         | E_ident _ -> ast
@@ -76,9 +77,9 @@ let rec reduce_aux (chans: channels) (constr: constructors) (ast: expr): expr =
                         | Some e -> reduce_aux chans constr (substitute_free_variable var e expr)
                         | None -> ast (* TODO : mettre dans une file d'attente ?? *)
                         end 
-        | E_type (constr_name, constr_def, prog) -> 
-                        let new_constrs = (constr_name, constr_def) :: constr in
-                        { exp = E_type(constr_name, constr_def, reduce_aux chans new_constrs prog);
+        | E_type (type_name, constructors, prog) -> 
+                        let new_constrs = constructors @ constr in
+                        { exp = E_type(type_name, constructors, reduce_aux chans new_constrs prog);
                         loc = ast.loc }
 
         
