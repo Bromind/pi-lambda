@@ -41,7 +41,7 @@ let () =
         let p = Parser.file Lexer.token buf in 
         close_in f;
         let _ = type_pi_lambda_expr p in
-        if !typing_only then
+        if not !typing_only then
         let reduced = type_pi_lambda_expr (reduce p) in
         let term_string = term_string_of_tast reduced in
         output_string stdout (term_string^"\n\t: "^(print_type reduced.typ)^"\n")
