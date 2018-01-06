@@ -62,6 +62,7 @@ match type_val t1, type_val t2 with
 | Tvar _, _
 | _, Tvar _ -> union t1 t2
 | Tname n1, Tname n2 when n1 = n2 -> ()
+| Tname n1, Tname n2 -> raise (UnificationError ("Expected type " ^ n1 ^ " but type " ^ n2 ^ "was found."))
 | _ -> raise (NotImplemented "unification")
  
 (* The most restricted channed *)
