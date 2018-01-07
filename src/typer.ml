@@ -36,19 +36,19 @@ match env with
 | [] -> raise (VarNotFound ("Variable not found: " ^ s))
 
 exception UnionError of string
-exception UnificationError of string
+exception UnificationError of pi_lambda_type * pi_lambda_type * loc option
 let union (t1: pi_lambda_type) (t2: pi_lambda_type) = 
 match type_val t1, type_val t2 with
 | Tvar v1, Tvar v2 when v1.var_id = v2.var_id -> ()
 | Tvar v1, _ -> 
                 if occur v1 t2 
                 then 
-                        raise (UnificationError ("Types "^(print_type (type_val t1))^" and "^(print_type (type_val t2))^" can not be unified."))
+                        raise (UnificationError (t1, t2, None))
                 else v1.var_type <- Some t2
 | _, Tvar v2 -> 
                 if occur v2 t1 
                 then 
-                        raise (UnificationError ("Types "^(print_type (type_val t1))^" and "^(print_type (type_val t2))^" can not be unified."))
+                        raise (UnificationError (t1, t2, None))
                 else v2.var_type <- Some t1
 | _ -> ()
 
@@ -58,11 +58,11 @@ match type_val t1, type_val t2 with
                 (unify_inner (channel_type ch1) (channel_type ch2)); (unify c1 c2)
 | Tdeliver_chan(ch1, c1), Tdeliver_chan(ch2, c2) -> 
                 (unify_outer (channel_type ch1) (channel_type ch2)); (unify c1 c2)
-| Tchan _, Tchan _ -> raise (UnificationError "Can not unify two `Tchan`s, inner or outer unification must be specified")
+| Tchan _, Tchan _ -> raise (UnificationError (t1, t2, None))
 | Tvar _, _
 | _, Tvar _ -> union t1 t2
 | Tname n1, Tname n2 when n1 = n2 -> ()
-| Tname n1, Tname n2 -> raise (UnificationError ("Expected type " ^ n1 ^ " but type " ^ n2 ^ "was found."))
+| Tname n1, Tname n2 -> raise (UnificationError (t1, t2, None))
 | _ -> raise (NotImplemented "unification")
  
 (* The most restricted channed *)
@@ -209,12 +209,18 @@ match expr.exp with
                         var_depth = depth; 
                         var_type = None
                 } in
-                let _ = unify_outer typed_f.typ (Tarrow (typed_arg.typ, result_type)) in
-                {
-                        texpr = T_app (typed_f, typed_arg);
-                        loc = expr.loc;
-                        typ = type_val result_type
-                }
+                begin
+                try
+                        unify_outer typed_f.typ (Tarrow (typed_arg.typ, result_type));
+                        {
+                                texpr = T_app (typed_f, typed_arg);
+                                loc = expr.loc;
+                                typ = type_val result_type
+                        }
+                with
+                | UnificationError (t1, t2, None) ->
+                                raise (UnificationError (t1, t2, Some expr.loc))
+                end
 
 | E_para pl ->
                 (*

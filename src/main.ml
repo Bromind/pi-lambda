@@ -57,7 +57,19 @@ let () =
         | Parser.Error ->
                 error_loc (Lexing.lexeme_start_p buf);
                 eprintf "Syntax error\n@?"; exit 1
-        | Typer.UnificationError s -> print_string s; exit 2
+        | Typer.UnificationError (t1, t2, loc) ->
+                        let msg =
+                                begin match loc with
+                                | Some loc -> string_of_loc loc
+                                | None -> "At unknown position, "
+                                end ^
+                                "can not unify the types "
+                                ^ (print_type (type_val t1))
+                                ^ " and "
+                                ^ (print_type (type_val t2))
+                                ^ "\n"
+                        in
+                        prerr_endline msg; exit 2
         | Typer.ChannelLeakError (name_chan, depth_chan, name_leak, depth_leak, loc) -> 
                         let msg = 
                                 begin match loc with
