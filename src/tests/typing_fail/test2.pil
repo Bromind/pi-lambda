@@ -1,7 +1,7 @@
 
 
 type my_type:
-| constr1: (a^0 -> a^0)
+| constr1: a^0, a^0
 | constr2: a^0
 | constr3: .
 
