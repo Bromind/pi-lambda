@@ -17,10 +17,10 @@ let error_loc pos =
 
 let string_of_loc (bpos, epos) = 
         "File \"" ^ !filename
-        ^ "\", from line " ^ (string_of_int bpos.pos_lnum)
-        ^ " character " ^ (string_of_int bpos.pos_cnum)
-        ^ " to line " ^ (string_of_int epos.pos_lnum)
-        ^ " character " ^ (string_of_int epos.pos_cnum) ^ ": "
+        ^ "\", at line " ^ (string_of_int bpos.pos_lnum)
+        ^ "-" ^ (string_of_int epos.pos_lnum)
+        ^ ", character " ^ (string_of_int (bpos.pos_cnum - 1))
+        ^ "-" ^ (string_of_int (epos.pos_cnum - 1)) ^ ": "
  
 let print_version () = print_string ("Version " ^ version ^ " - " ^ version_name ^ "\n"); exit 0
 
