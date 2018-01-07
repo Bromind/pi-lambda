@@ -50,6 +50,7 @@
 %type <Ast.expr> program
 %type <Ast.expr> parens_program
 %type <Pi_lambda_types.pi_lambda_type> type_def
+%type <string -> Constructor.constructor> constructor
 
 %%
 
@@ -81,11 +82,16 @@ program:
 
 
 constructor:
-| constructor_name = IDENT; COLON?; constructor_type = type_def?
+| constructor_name = IDENT; COLON?; constructor_args = separated_list(COMMA, type_def)
         { 
-                match constructor_type with
-                | Some t -> fun s -> (constructor_name, Tarrow(t, Tname (s)))
-                | None -> fun s ->(constructor_name, Tname(s)) 
+                let aggregate arg post = 
+                        Tarrow (arg, post)
+                in
+                fun type_name -> 
+                        (
+                                constructor_name, 
+                                List.fold_right aggregate constructor_args (Tname(type_name))
+                        )
         }
 ;
 
