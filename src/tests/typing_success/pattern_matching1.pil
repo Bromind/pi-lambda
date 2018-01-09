@@ -1,0 +1,6 @@
+
+type my_type: constructor.
+
+\a -> 
+match (a)
+| (constructor) -> (constructor)
