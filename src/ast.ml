@@ -12,6 +12,7 @@ and expr_tree =
 | E_ident of ident
 | E_app of expr * expr
 | E_para of expr list
+| E_match of expr * (expr * expr) list
 | E_chan of ident * expr
 | E_send of ident * expr * expr
 | E_deliver of ident * ident * expr
@@ -23,6 +24,7 @@ match depth with
 | true::tl -> "|  " ^ (depth_shift tl)
 | false::tl -> "   " ^ (depth_shift tl)
 
+exception PatternMatchingNotImplemented
 let rec string_of_ast_aux (depth: bool list ) expr = 
         let prefix = depth_shift depth in
         let string_of_sub_ast = string_of_ast_aux (depth @ [true] ) in 
@@ -72,6 +74,7 @@ let rec string_of_ast_aux (depth: bool list ) expr =
                                 "type " ^ type_name ^ "\n"
                                 ^ print_list constructors
                                 ^ prefix ^ string_of_sub_ast_last prog
+                | E_match _ -> raise PatternMatchingNotImplemented
         in
         sub_tree_string  
 

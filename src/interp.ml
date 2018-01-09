@@ -43,6 +43,7 @@ let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : ex
                                 term2
                         else
                                 {exp = E_type (ident, constr, subs_in prog); loc = term2.loc}
+        | E_match _ -> raise PatternMatchingNotImplemented
 
 let rec reduce_aux (chans: channels) (constr: constructor list) (ast: expr): expr = 
         match ast.exp with
@@ -81,6 +82,7 @@ let rec reduce_aux (chans: channels) (constr: constructor list) (ast: expr): exp
                         let new_constrs = constructors @ constr in
                         { exp = E_type(type_name, constructors, reduce_aux chans new_constrs prog);
                         loc = ast.loc }
+        | E_match _ -> raise PatternMatchingNotImplemented
 
         
 let reduce (ast: expr): expr = 

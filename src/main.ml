@@ -90,4 +90,5 @@ let () =
                         prerr_endline msg; exit 3
         | Interp.ApplicationError(loc, t1, t2) ->
                         print_string ("Can not apply term\n\n" ^ (string_of_ast t2) ^"\n to the term\n\n"^(string_of_ast t1)); exit 4;
+        | Ast.PatternMatchingNotImplemented -> print_string "Pattern matching is not yet implemented. Please keep waiting, our best technicians are working on the problem right now.\n"; exit 5;
         | _ -> exit 5;

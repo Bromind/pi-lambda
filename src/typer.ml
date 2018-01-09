@@ -337,6 +337,7 @@ match expr.exp with
                 with
                 | ChannelLeakError _ -> raise (ErrorConstructorNotWellTyped constructors)
                 end
+| E_match _ -> raise PatternMatchingNotImplemented
 
 let type_pi_lambda_expr expr = 
         let tast = type_pi_lambda_expr_aux [] 0 expr in

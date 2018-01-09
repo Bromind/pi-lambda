@@ -34,6 +34,7 @@
         | COLON -> "COLON "
         | CIRCUMDEPTH d -> "CIRCUMDEPTH(" ^ (string_of_int d) ^ ") "
         | BAR -> "BAR "
+        | MATCH -> "MATCH "
 }
 
 let lowercaseLetter = [ 'a' - 'z' ]
@@ -65,6 +66,7 @@ rule token = parse
 | "<"           { LT }
 | "type"        { TYPE }
 | ':'           { COLON }
+| "match"       { MATCH }
 | '^' (integer as i) { 
         try (CIRCUMDEPTH (int_of_string i))
         with

@@ -43,7 +43,7 @@
 
 %token <string> IDENT
 %token <int> CIRCUMDEPTH
-%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR
+%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR MATCH
 
 %start file
 %type <Ast.expr> file
@@ -51,6 +51,7 @@
 %type <Ast.expr> parens_program
 %type <Pi_lambda_types.pi_lambda_type> type_def
 %type <string -> Constructor.constructor> constructor
+%type <(Ast.expr * Ast.expr)> pattern
 
 %%
 
@@ -64,6 +65,8 @@ program:
         { { exp = E_lambda(id, e); loc = ($startpos, $endpos)} }
 | TYPE ; type_name = IDENT ; COLON ; BAR?; cl = separated_nonempty_list(BAR, constructor) ; DOT; p = program
         { {exp = E_type (type_name, List.map (fun cf -> cf type_name) cl, p); loc = ($startpos, $endpos)} }
+| MATCH; arg=parens_program ; patterns = list(pattern)
+        { {exp = E_match (arg, patterns); loc = ($startpos, $endpos)} }
 | p_abs=parens_program p_arg = parens_program
         { { exp = E_app(p_abs, p_arg); loc = ($startpos, $endpos)} }
 | LSB local_progs = separated_nonempty_list(PARA, program) RSB
@@ -80,6 +83,9 @@ program:
         { e }
 ;
 
+pattern: 
+| BAR; pattern=parens_program; ARROW; result=parens_program
+        { (pattern, result) }
 
 constructor:
 | constructor_name = IDENT; COLON?; constructor_args = separated_list(COMMA, type_def)
