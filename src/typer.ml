@@ -4,6 +4,8 @@ open Identifier
 open Constructor
 
 exception NotImplemented of string
+(* Expected type (i.e. type of matched term), found type *)
+exception PatternTypeError of pi_lambda_type * pi_lambda_type
 
 type typed_expr = {
         texpr: typed_expr_tree;
@@ -19,6 +21,7 @@ and typed_expr_tree =
 | T_send of ident * typed_expr * typed_expr
 | T_deliver of ident * ident * typed_expr
 | T_type of ident * constructor list * typed_expr
+| T_match of typed_expr * (typed_expr * typed_expr) list
 
 
 type environment = (ident * pi_lambda_type) list
@@ -103,23 +106,45 @@ match type_val t1, type_val t2 with
 
 exception ChannelLeakError of ident option * depth * ident option * depth * loc option
 
-let rec free_names tast: ident list = 
-let filter var = fun n -> var != n in 
+(* Returns a list containing the free variables of tast along with their type *)
+let rec free_names_types tast: (ident * pi_lambda_type) list = 
+let filter var = fun n -> 
+        let (var2, _) = n in
+        var != var2 
+in 
 match tast.texpr with
-| T_ident v -> [v]
-| T_send (chan, msg, cont) -> [chan]@(free_names msg)@(free_names cont)
+| T_ident v -> [(v, tast.typ)]
+| T_send (chan, msg, cont) -> 
+                begin
+                match tast.typ with
+                | Tdot (t, _) ->
+                                [(chan, t)]@(free_names_types msg)@(free_names_types cont)
+                | _ -> assert false;
+                end
 | T_deliver (chan, var, cont) -> 
-                let cont_filtered = List.filter (filter var) (free_names cont) in
-                [chan]@cont_filtered
+                let cont_filtered = List.filter (filter var) (free_names_types cont) in
+                begin
+                match tast.typ with
+                | Tdot (t, _) ->
+                                [(chan, t)]@cont_filtered
+                | _ -> assert false;
+                end
 | T_chan (i, t) 
 | T_type (i, _, t)
 | T_lambda (i, t) ->
-                List.filter (fun elem -> elem <> i) (free_names t)
+                List.filter (fun elem -> let (e_name, _) = elem in e_name <> i) (free_names_types t)
 | T_app (t1, t2) ->
-                (free_names t1) @ (free_names t2)
+                (free_names_types t1) @ (free_names_types t2)
 | T_para tl -> 
-                let para_free_names = List.map free_names tl in
-                List.flatten para_free_names
+                let para_free_names_types = List.map free_names_types tl in
+                List.flatten para_free_names_types
+| T_match _ -> raise PatternMatchingNotImplemented
+
+(* Returns a list containing the free variables of tast.*)
+let free_names tast: ident list = 
+        let typed_ident = free_names_types tast in
+        List.map (function | (ident, typ) -> ident) typed_ident
+
 
 let innermostChannel tast = 
         let rec innerChannels tast = 
@@ -337,7 +362,43 @@ match expr.exp with
                 with
                 | ChannelLeakError _ -> raise (ErrorConstructorNotWellTyped constructors)
                 end
-| E_match _ -> raise PatternMatchingNotImplemented
+| E_match (arg,  patterns) ->  
+                let typed_arg = type_pi_lambda_expr_aux env depth arg in
+                let type_pattern pattern = 
+                        let (pat, res) = pattern in
+                        let typed_pat = type_pi_lambda_expr_aux env depth pat in
+                        let free_vars_pat = free_names_types typed_pat in
+                        let new_env = free_vars_pat @ env in
+                        let typed_res = type_pi_lambda_expr_aux new_env depth res in
+                        (typed_pat, typed_res)
+                in
+                let typed_patterns = List.map type_pattern patterns in
+                let assert_pattern_type_is_arg_type typed_pattern = 
+                        let (typed_pat, _) = typed_pattern in
+                        (* Generalize: typed_pat does not necessary need to 
+                         * have the same type: it needs to have a 
+                         * "more general" type, i.e. typ_arg.typ must be an 
+                         * instance of typ_pat.typ *)
+                        if typed_arg.typ <> typed_pat.typ
+                        then
+                                raise (PatternTypeError (typed_pat.typ, typed_arg.typ))
+                in
+                let returned_type = Tvar {
+                        var_id = fresh_var_id None ();
+                        var_depth = depth;
+                        var_type = None}
+                in
+                let unify_all pattern = 
+                        let (_, typed_ret) = pattern in
+                        unify returned_type typed_ret.typ
+                in
+                List.iter assert_pattern_type_is_arg_type typed_patterns;
+                List.iter unify_all typed_patterns;
+                {
+                        texpr = T_match(typed_arg, typed_patterns);
+                        loc = expr.loc;
+                        typ = returned_type
+                }
 
 let type_pi_lambda_expr expr = 
         let tast = type_pi_lambda_expr_aux [] 0 expr in
@@ -392,6 +453,7 @@ let rec string_of_tast_aux (depth: bool list ) expr =
                                 "type " ^ type_name ^ "\n"
                                 ^ print_list constructors
                                 ^ prefix ^ string_of_sub_ast_last prog
+                | T_match _ -> raise PatternMatchingNotImplemented
         in
         sub_tree_string  
 
@@ -410,4 +472,5 @@ match t.texpr with
 | T_send (i, t1, t2) -> i ^ "[" ^ (term_string_of_tast t1) ^ "]." ^ (term_string_of_tast t2)
 | T_deliver (c, v, t) -> c ^ ", " ^ v ^ "> " ^ (term_string_of_tast t)
 | T_type (s, def, p) -> "type " ^ s ^ ":\n" ^ (string_of_constructor_list def) ^ ".\n" ^ (term_string_of_tast p)
+| T_match _ -> raise PatternMatchingNotImplemented
 
