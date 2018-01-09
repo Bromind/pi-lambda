@@ -4,6 +4,12 @@ open Identifier
 open Constructor
 
 exception NotImplemented of string
+exception UnionError of string
+exception UnificationError of pi_lambda_type * pi_lambda_type * loc option
+exception VarNotFound of string
+exception ChannelLeakError of ident option * depth * ident option * depth * loc option
+exception ErrorConstructorNotWellTyped of constructor list
+
 (* Expected type (i.e. type of matched term), found type *)
 exception PatternTypeError of pi_lambda_type * pi_lambda_type
 
@@ -30,7 +36,6 @@ type environment = (ident * pi_lambda_type) list
 let add s t env = 
         (s, t)::env
 
-exception VarNotFound of string
 (* Finds the type of ident `s` in environment `env` *)
 (* TODO Utiliser filter *)
 let rec find s env =
@@ -38,8 +43,6 @@ match env with
 | (s_hd, t)::tl -> if s = s_hd then type_val t else find s tl
 | [] -> raise (VarNotFound ("Variable not found: " ^ s))
 
-exception UnionError of string
-exception UnificationError of pi_lambda_type * pi_lambda_type * loc option
 let union (t1: pi_lambda_type) (t2: pi_lambda_type) = 
 match type_val t1, type_val t2 with
 | Tvar v1, Tvar v2 when v1.var_id = v2.var_id -> ()
@@ -104,7 +107,6 @@ match type_val t1, type_val t2 with
                 (unify_outer targ1 targ2); (unify_inner tbody1 tbody2)
 | _ -> unify t1 t2
 
-exception ChannelLeakError of ident option * depth * ident option * depth * loc option
 
 (* Returns a list containing the free variables of tast along with their type *)
 let rec free_names_types tast: (ident * pi_lambda_type) list = 
@@ -193,7 +195,6 @@ match tast with
 | Tcross tl -> List.iter checkChannelLeak tl
 | Tname _ -> ()
 
-exception ErrorConstructorNotWellTyped of constructor list
 let rec type_pi_lambda_expr_aux (env: environment) (depth: int) (expr: expr): typed_expr =
 match expr.exp with
 | E_lambda (var, body) ->
