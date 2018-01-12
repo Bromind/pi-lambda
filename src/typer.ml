@@ -112,7 +112,7 @@ match type_val t1, type_val t2 with
 let rec free_names_types tast: (ident * pi_lambda_type) list = 
 let filter var = fun n -> 
         let (var2, _) = n in
-        var != var2 
+        var <> var2 
 in 
 match tast.texpr with
 | T_ident v -> [(v, tast.typ)]
@@ -367,10 +367,14 @@ match expr.exp with
                 let typed_arg = type_pi_lambda_expr_aux env depth arg in
                 let type_pattern pattern = 
                         let (pat, res) = pattern in
-                        let typed_pat = type_pi_lambda_expr_aux env depth pat in
-                        let free_vars_pat = free_names_types typed_pat in
-                        let new_env = free_vars_pat @ env in
+                        (* TODO Prendre toutes les variables libres, 
+                         * ajouter des variables de type en tête pour
+                         * chacune, puis unifier avec typed_arg *)
+                        let pat_fv = List.map (fun name -> (name, new_fresh_tvar depth)) (Ast.free_names pat) in
+                        let typed_pat = type_pi_lambda_expr_aux pat_fv depth pat in 
+                        let new_env = env @ pat_fv in (* add free variables as default (not to override already defined one *)
                         let typed_res = type_pi_lambda_expr_aux new_env depth res in
+                        unify typed_pat.typ typed_arg.typ;
                         (typed_pat, typed_res)
                 in
                 let typed_patterns = List.map type_pattern patterns in
@@ -380,7 +384,7 @@ match expr.exp with
                          * have the same type: it needs to have a 
                          * "more general" type, i.e. typ_arg.typ must be an 
                          * instance of typ_pat.typ *)
-                        if typed_arg.typ <> typed_pat.typ
+                        if type_val typed_arg.typ <> type_val typed_pat.typ
                         then
                                 raise (PatternTypeError (typed_pat.typ, typed_arg.typ))
                 in

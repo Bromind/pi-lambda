@@ -18,13 +18,36 @@ and expr_tree =
 | E_deliver of ident * ident * expr
 | E_type of ident * constructor list * expr
 
+(* Returns a list containing the free variables of ast *)
+exception PatternMatchingNotImplemented
+let rec free_names ast: ident list =
+let filter var = fun n ->
+        var <> n
+in
+match ast.exp with
+| E_ident v -> [v]
+| E_send (chan, msg, cont) ->
+                chan :: (free_names msg)@(free_names cont)
+| E_deliver (chan, var, cont) ->
+                let cont_filtered = List.filter (filter var) (free_names cont) in
+                chan :: cont_filtered
+| E_chan (i, t)
+| E_type (i, _, t)
+| E_lambda (i, t) ->
+                List.filter (filter i) (free_names t)
+| E_app (t1, t2) ->
+                (free_names t1) @ (free_names t2)
+| E_para tl ->
+                let para_free_names = List.map free_names tl in
+                List.flatten para_free_names
+| E_match _ -> raise PatternMatchingNotImplemented
+
 let rec depth_shift (depth: bool list) = 
 match depth with
 | [] -> "+- "
 | true::tl -> "|  " ^ (depth_shift tl)
 | false::tl -> "   " ^ (depth_shift tl)
 
-exception PatternMatchingNotImplemented
 let rec string_of_ast_aux (depth: bool list ) expr = 
         let prefix = depth_shift depth in
         let string_of_sub_ast = string_of_ast_aux (depth @ [true] ) in 

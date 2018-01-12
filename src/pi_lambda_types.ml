@@ -38,14 +38,14 @@ match s with
                 fun () -> incr counter_var_id; Anonymous(!counter_var_id)
 | Some s -> fun () -> Named s
 
-
 let fresh_chan_id s: unit -> id = 
 match s with
 | None -> 
                 fun () -> incr counter_chan_id; Anonymous(!counter_chan_id)
 | Some s -> fun () -> Named s
 
-
+let new_fresh_tvar depth = 
+        Tvar { var_id = fresh_var_id None (); var_depth = depth; var_type = None }
 
 let print_id id = 
 match id with
