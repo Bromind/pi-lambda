@@ -88,6 +88,8 @@ match type_val t1, type_val t2 with
                 unify_outer c1 c2
 | Tarrow (targ1, tbody1), Tarrow (targ2, tbody2) -> 
                 (unify_inner targ1 targ2); (unify_outer tbody1 tbody2)
+| Tcross tl1, Tcross tl2 ->
+                List.iter2 unify_inner tl1 tl2
 | _ -> unify t1 t2
 
 (* The most general channel *)
@@ -107,6 +109,8 @@ match type_val t1, type_val t2 with
                 unify_inner c1 c2
 | Tarrow (targ1, tbody1), Tarrow (targ2, tbody2) -> 
                 (unify_outer targ1 targ2); (unify_inner tbody1 tbody2)
+| Tcross tl1, Tcross tl2 ->
+                List.iter2 unify_outer tl1 tl2
 | _ -> unify t1 t2
 
 
