@@ -24,7 +24,7 @@
     + [✓] Multiple constructors
     + [ ] Detect when a result type match a defined type
     + [ ] Merge Tdot & Tchan together ??
-- [ ] Standard data types defined
+    + [ ] Pattern matching
 - [ ] Recursive functions
 - [ ] Change version name
 
@@ -32,6 +32,13 @@
 
 - [ ] Find a *nice* and *meaningful* name
 - [ ] Have a logotype
+- [ ] Change version name
+
+# release α-0.4 - A extensible release
+
+- [ ] Multiple files support
+- [ ] Library support
+- [ ] Standard library
 - [ ] Change version name
 
 # release 0.1 - A usable release
