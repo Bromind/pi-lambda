@@ -399,12 +399,12 @@ match expr.exp with
                         var_depth = depth;
                         var_type = None}
                 in
-                let unify_all pattern = 
+                let unify_inner_all pattern = 
                         let (_, typed_ret) = pattern in
-                        unify returned_type typed_ret.typ
+                        unify_inner returned_type typed_ret.typ
                 in
                 List.iter assert_pattern_type_is_arg_type typed_patterns;
-                List.iter unify_all typed_patterns;
+                List.iter unify_inner_all typed_patterns;
                 {
                         texpr = T_match(typed_arg, typed_patterns);
                         loc = expr.loc;
