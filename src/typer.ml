@@ -79,6 +79,7 @@ match type_val t1, type_val t2 with
                 let inner_var = Pervasives.max v1.var_depth v2.var_depth in
                 v1.var_depth <- inner_var;
                 v2.var_depth <- inner_var;
+                v1.var_type <- Some t2;
 | Tchan (id1, c1), Tchan (id2, c2) -> 
                 let inner_chan = Pervasives.max id1.chan_depth id2.chan_depth in
                 id1.chan_depth <- inner_chan;
@@ -97,6 +98,7 @@ match type_val t1, type_val t2 with
                 let outer_var = Pervasives.min v1.var_depth v2.var_depth in
                 v1.var_depth <- outer_var;
                 v2.var_depth <- outer_var;
+                v1.var_type <- Some t2;
 | Tchan (id1, c1), Tchan (id2, c2) -> 
                 let outer_chan = Pervasives.min id1.chan_depth id2.chan_depth in
                 id1.chan_depth <- outer_chan;
@@ -371,8 +373,8 @@ match expr.exp with
                          * ajouter des variables de type en tête pour
                          * chacune, puis unifier avec typed_arg *)
                         let pat_fv = List.map (fun name -> (name, new_fresh_tvar depth)) (Ast.free_names pat) in
-                        let typed_pat = type_pi_lambda_expr_aux pat_fv depth pat in 
                         let new_env = env @ pat_fv in (* add free variables as default (not to override already defined one *)
+                        let typed_pat = type_pi_lambda_expr_aux new_env depth pat in
                         let typed_res = type_pi_lambda_expr_aux new_env depth res in
                         unify typed_pat.typ typed_arg.typ;
                         (typed_pat, typed_res)

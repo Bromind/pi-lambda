@@ -47,12 +47,14 @@ let () =
         try
         let p = Parser.file Lexer.token buf in 
         close_in f;
-        let _ = type_pi_lambda_expr p in
-        if not !typing_only then
-        let reduced = type_pi_lambda_expr (reduce p) in
-        let term_string = term_string_of_tast reduced in
-        output_string stdout (term_string^"\n\t: "^(print_type reduced.typ)^"\n")
-
+        let typed_p = type_pi_lambda_expr p in
+        if not !typing_only
+        then
+                let reduced = type_pi_lambda_expr (reduce p) in
+                let term_string = term_string_of_tast reduced in
+                output_string stdout (term_string^"\n\t: "^(print_type reduced.typ)^"\n")
+        else
+                output_string stdout (print_type (type_val typed_p.typ))
         with
         | Parser.Error ->
                 error_loc (Lexing.lexeme_start_p buf);
