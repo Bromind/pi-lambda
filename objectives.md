@@ -25,6 +25,9 @@
     + [ ] Detect when a result type match a defined type
     + [ ] Merge Tdot & Tchan together ??
     + [ ] Pattern matching
+      * [ ] Basic pattern matching
+      * [ ] Detect missing cases
+      * [ ] Interpreter for pattern matching
 - [ ] Recursive functions
 - [ ] Change version name
 
