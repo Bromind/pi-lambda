@@ -1,0 +1,11 @@
+
+type type1: 
+| c1: a^0, b^0.
+
+type type2:
+| c2.
+
+\a -> 
+\b -> 
+match (a)
+| (((c1) (c2)) (b)) -> ([ (c2) || (b) ])
