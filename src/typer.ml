@@ -373,9 +373,6 @@ match expr.exp with
                 let typed_arg = type_pi_lambda_expr_aux env depth arg in
                 let type_pattern pattern = 
                         let (pat, res) = pattern in
-                        (* TODO Prendre toutes les variables libres, 
-                         * ajouter des variables de type en tête pour
-                         * chacune, puis unifier avec typed_arg *)
                         let pat_fv = List.map (fun name -> (name, new_fresh_tvar depth)) (Ast.free_names pat) in
                         let new_env = env @ pat_fv in (* add free variables as default (not to override already defined one *)
                         let typed_pat = type_pi_lambda_expr_aux new_env depth pat in
