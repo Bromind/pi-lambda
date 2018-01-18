@@ -333,19 +333,29 @@ match expr.exp with
                                 unify_outer (Tchan ({chan_id = fresh_chan_id None (); chan_depth = v.var_depth}, Tvar {var_id = fresh_var_id None (); var_depth = v.var_depth; var_type = None})) t; t
                         | t -> t
                 in
-                if (depth_of chan_type) <= most_inner_free_name_depth
-                then
-                        (* TODO Add to data_leak *)
-                        raise (ChannelLeakError (Some chan, depth_of chan_type, Some most_inner_free_name, most_inner_free_name_depth, Some expr.loc))
-                else
-                        let typed_cont = type_pi_lambda_expr_aux env depth cont in
-                        let _ = unify_inner (channel_type chan_type) typed_msg.typ in
-                        {
-                                texpr = T_send(chan, typed_msg, typed_cont);
-                                loc = expr.loc;
-                                typ = Tsend_chan(type_val chan_type, type_val typed_cont.typ);
-                                data_leak = typed_cont.data_leak
-                        }
+                let typed_cont = type_pi_lambda_expr_aux env depth cont in
+                let _ = unify_inner (channel_type chan_type) typed_msg.typ in
+                let leaks = 
+                        begin
+                        if (depth_of chan_type) <= most_inner_free_name_depth
+                        then
+                                {
+                                        chan = chan;
+                                        c_depth = depth_of chan_type;
+                                        leak = most_inner_free_name;
+                                        l_depth = most_inner_free_name_depth;
+                                        loc = expr.loc
+                                } :: typed_cont.data_leak
+                        else
+                                typed_cont.data_leak
+                        end
+                in
+                {
+                        texpr = T_send(chan, typed_msg, typed_cont);
+                        loc = expr.loc;
+                        typ = Tsend_chan(type_val chan_type, type_val typed_cont.typ);
+                        data_leak = leaks
+                }
 
 | E_deliver (chan, ident, cont) -> 
                 let chan_depth = 
@@ -440,7 +450,10 @@ match expr.exp with
 
 let type_pi_lambda_expr expr = 
         let tast = type_pi_lambda_expr_aux [] 0 expr in
-        (*checkChannelLeak tast.typ;*) tast
+        match tast.data_leak with
+        | [] -> tast
+        | hd::tl -> 
+                        raise (ChannelLeakError (Some hd.chan, hd.c_depth, Some hd.leak, hd.l_depth, Some hd.loc))
 
 let rec string_of_tast_aux (depth: bool list ) expr = 
         let prefix = depth_shift depth in
