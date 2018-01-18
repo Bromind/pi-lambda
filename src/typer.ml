@@ -13,10 +13,19 @@ exception ErrorConstructorNotWellTyped of constructor list
 (* Expected type (i.e. type of matched term), found type *)
 exception PatternTypeError of pi_lambda_type * pi_lambda_type
 
+type leak_info = {
+        chan: ident;
+        c_depth: depth;
+        leak: ident;
+        l_depth: depth;
+        loc: loc
+}
+
 type typed_expr = {
         texpr: typed_expr_tree;
         loc: loc;
-        typ: pi_lambda_type
+        typ: pi_lambda_type;
+        data_leak: leak_info list
 }
 and typed_expr_tree = 
 | T_lambda of ident * typed_expr
@@ -214,7 +223,8 @@ match expr.exp with
                 {
                         texpr = T_lambda (var, typed_body);
                         loc = expr.loc;
-                        typ = Tarrow ((find var new_env), typed_body.typ)
+                        typ = Tarrow ((find var new_env), typed_body.typ);
+                        data_leak = typed_body.data_leak
                 }
 | E_ident var ->
                 (*
@@ -225,7 +235,8 @@ match expr.exp with
                 {
                         texpr = T_ident var;
                         loc = expr.loc;
-                        typ = find var env
+                        typ = find var env;
+                        data_leak = []
                 }
 | E_app (f, arg) ->
                 (*
@@ -247,7 +258,9 @@ match expr.exp with
                         {
                                 texpr = T_app (typed_f, typed_arg);
                                 loc = expr.loc;
-                                typ = type_val result_type
+                                typ = type_val result_type;
+(* TODO: remove idents in `result_type.data_leak` which match the argument if the argument is suitable. *)
+                                data_leak = typed_f.data_leak 
                         }
                 with
                 | UnificationError (t1, t2, None) ->
@@ -265,12 +278,16 @@ match expr.exp with
                 let local_w = type_pi_lambda_expr_aux env depth in
                 let typed_term_list = List.map local_w pl in
                 let extract_types texpr = texpr.typ in
+                let extract_data_leak texpr = texpr.data_leak in
                 let type_list = List.map extract_types typed_term_list in
+                let data_leak_list = 
+                        List.flatten (List.map extract_data_leak typed_term_list)
+                in
                 {
                         texpr = T_para typed_term_list;
                         loc = expr.loc;
-                        typ = Tcross type_list
-
+                        typ = Tcross type_list;
+                        data_leak = data_leak_list
                 }
 
 | E_chan (ident, body) -> 
@@ -290,7 +307,8 @@ match expr.exp with
                 {
                         texpr = T_chan (ident, typed_body);
                         loc = expr.loc;
-                        typ = Tdot(type_val chan_type, typed_body.typ)
+                        typ = Tdot(type_val chan_type, typed_body.typ);
+                        data_leak = typed_body.data_leak
                 }
 
 | E_send (chan, msg, cont) ->
@@ -317,6 +335,7 @@ match expr.exp with
                 in
                 if (depth_of chan_type) <= most_inner_free_name_depth
                 then
+                        (* TODO Add to data_leak *)
                         raise (ChannelLeakError (Some chan, depth_of chan_type, Some most_inner_free_name, most_inner_free_name_depth, Some expr.loc))
                 else
                         let typed_cont = type_pi_lambda_expr_aux env depth cont in
@@ -324,7 +343,8 @@ match expr.exp with
                         {
                                 texpr = T_send(chan, typed_msg, typed_cont);
                                 loc = expr.loc;
-                                typ = Tsend_chan(type_val chan_type, type_val typed_cont.typ)
+                                typ = Tsend_chan(type_val chan_type, type_val typed_cont.typ);
+                                data_leak = typed_cont.data_leak
                         }
 
 | E_deliver (chan, ident, cont) -> 
@@ -348,7 +368,8 @@ match expr.exp with
                 {
                         texpr = T_deliver(chan, ident, typed_cont);
                         loc = expr.loc;
-                        typ = Tdeliver_chan(type_val chan_type, type_val typed_cont.typ)
+                        typ = Tdeliver_chan(type_val chan_type, type_val typed_cont.typ);
+                        data_leak = typed_cont.data_leak
                 }
 | E_type (type_name, constructors, prog) ->
                 begin
@@ -364,7 +385,8 @@ match expr.exp with
                 {
                         texpr = T_type(type_name, constructors, typed_prog);
                         loc = expr.loc;
-                        typ = typed_prog.typ
+                        typ = typed_prog.typ;
+                        data_leak = typed_prog.data_leak
                 }
                 with
                 | ChannelLeakError _ -> raise (ErrorConstructorNotWellTyped constructors)
@@ -400,12 +422,20 @@ match expr.exp with
                         let (_, typed_ret) = pattern in
                         unify_inner returned_type typed_ret.typ
                 in
+                let get_leak tpattern = 
+                        let (_, typed_ret) = tpattern in
+                        typed_ret.data_leak
+                in
+                let all_leaks = 
+                        List.flatten (List.map get_leak typed_patterns)
+                in
                 List.iter assert_pattern_type_is_arg_type typed_patterns;
                 List.iter unify_inner_all typed_patterns;
                 {
                         texpr = T_match(typed_arg, typed_patterns);
                         loc = expr.loc;
-                        typ = returned_type
+                        typ = returned_type;
+                        data_leak = all_leaks
                 }
 
 let type_pi_lambda_expr expr = 
