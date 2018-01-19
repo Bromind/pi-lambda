@@ -43,7 +43,7 @@
 
 %token <string> IDENT
 %token <int> CIRCUMDEPTH
-%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR MATCH
+%token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR MATCH CROSS
 
 %start file
 %type <Ast.expr> file
@@ -108,6 +108,8 @@ type_def:
         { Tarrow (t1, t2) }
 | LT; chan = IDENT; depth = CIRCUMDEPTH; COMMA; chan_type = type_def; GT; 
         { get_cvar_from_name chan depth chan_type }
+| LSB; para_types = separated_nonempty_list(CROSS, type_def); RSB
+        { Tcross para_types }
 ;
 
 parens_program:
