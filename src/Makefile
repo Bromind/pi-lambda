@@ -1,10 +1,9 @@
-
-CMO=config.cmo identifier.cmo channel.cmo pi_lambda_types.cmo constructor.cmo ast.cmo lexer.cmo typer.cmo parser.cmo interp.cmo 
+CMO=tree.cmo network_topology.cmo topology_config_parser.cmo config.cmo identifier.cmo channel.cmo pi_lambda_types.cmo constructor.cmo ast.cmo lexer.cmo typer.cmo parser.cmo interp.cmo 
 GENERATED=lexer.ml parser.ml parser.mli
 
 CFLAGS=-g -thread
-CLIBS=unix.cma threads.cma
-COMPILER=ocamlc $(CFLAGS)
+PACKAGES_DEP=yojson,unix,threads
+COMPILER=ocamlfind ocamlc -package $(PACKAGES_DEP) $(CFLAGS)
 
 LFLAGS=
 LEXER=ocamllex $(LFLAGS)
@@ -12,16 +11,20 @@ LEXER=ocamllex $(LFLAGS)
 PFLAGS=-v --dump --explain --graph
 PARSER=menhir $(PFLAGS)
 
-all: repl inter test
+all: repl inter test config
 
 repl: $(CMO) repl.cmo
-	$(COMPILER) -o $@ $(CLIBS) $(CMO) repl.cmo
+	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) repl.cmo
 
 inter: $(CMO) main.cmo
-	$(COMPILER) -o $@ $(CLIBS) $(CMO) main.cmo
+	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) main.cmo
 
 test: inter tests/test_table tests/test.sh
 	cd tests; (./test.sh && cd ..) || (cd .. && exit 1)
+
+config: $(CMO) config_tester.cmo
+	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) config_tester.cmo
+
 
 .SUFFIXES: .mli .ml .cmi .cmo .mll .mly 
 .mli.cmi:
