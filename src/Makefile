@@ -25,6 +25,8 @@ test: inter tests/test_table tests/test.sh
 config: $(CMO) config_tester.cmo
 	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) config_tester.cmo
 
+server: $(CMO) server.cmo
+	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) server.cmo
 
 .SUFFIXES: .mli .ml .cmi .cmo .mll .mly 
 .mli.cmi:
