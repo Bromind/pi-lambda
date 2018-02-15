@@ -1,0 +1,52 @@
+
+        Communication Protocol (TCP)
+	----------------------------
+
+We are provided a set of nodes. Each node is identified by its IP address and 
+its port. Programs are initially run at a single location. However, a program 
+is not tighted to a particular location. After its very structure, a program
+can also be distributed. 
+
+Hence, the interpreter has the possibility, at will, to delocalise the 
+computation of some parts of the program. This document is a draft to describe 
+how this distribution is performed in the current implementation.
+
+I) Subprograms as terms
+-----------------------
+
+Given a program, we can separate branches of the AST. In particular, the 
+semantics of parallel executions (`[A || B || ...]`) is specified in such a way
+that parallelism is require to evaluate programs (or at least concurrency): `A`
+can not be reduced at once, then `B`.
+
+Hence, when we are given a term (possibly with free variables), we can send 
+that term to an other location which will reduce it meanwhile the original 
+location reduces an other term.
+
+It is assumed subterms are correctly typed a priori by the sender. If needed, 
+type indications are sent in a format to be defined.
+
+II) Payload structure
+---------------------
+
+A payload is a term to be reduced remotely. In this implementation, payloads
+are exchanged througt TCP/IP connections, although any other communication 
+channel is fine, as long as it is reliable. Also, in this implementation, 
+paylaods are exchanged in JSON format, on a single line.
+
+The JSON string contains the following elements:
+- At top level, a single `task` key associated to an object composed of:
+  + a `task_id`, an integer
+  + an `environment`, which associate all necessary free names of the term
+  + the `payload`, a string of the term to compute, with special characters
+    escaped such that it can by directly given to the parser.
+
+The structure of the environment is to be defined according to the needs.
+
+III) Example
+------------
+
+The following JSON string represent the task with `task_id` 123 which reduces 
+the identity function (actually, there is nothing to do here).
+
+{"task": {"task_id": 123, "environment": [], "payload": "\\x.x" }}
