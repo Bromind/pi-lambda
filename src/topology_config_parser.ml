@@ -15,6 +15,9 @@ let rec json_to_tree json =
         else 
                 Node (node, subtrees)
 
-let tree_of_filename filename = 
+let node_list_of_filename filename = 
         let json = Yojson.Basic.from_file filename in
-        json_to_tree json
+        let nodes = json |> member "nodes" |> to_list |> List.map json_to_tree in
+        nodes
+
+
