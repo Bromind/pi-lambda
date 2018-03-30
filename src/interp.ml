@@ -11,6 +11,8 @@ exception ApplicationError of loc * expr * expr
 exception NotImplementedError of loc * expr
 exception SubstitutionError of loc * ident * expr
 
+exception NoSuchChannel of string
+
 (** Substitute ident by term1 in term2*)
 let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : expr = 
         let subs_in = substitute_free_variable ident term1 in
@@ -45,7 +47,7 @@ let rec substitute_free_variable (ident: ident) (term1: expr) (term2: expr) : ex
                                 {exp = E_type (ident, constr, subs_in prog); loc = term2.loc}
         | E_match _ -> raise PatternMatchingNotImplemented
 
-let rec reduce_aux (chans: channels) (constr: constructor list) (ast: expr): expr = 
+let rec reduce_aux (chans: Concurrent_Channel.channel list) (constr: constructor list) (ast: expr): expr = 
         match ast.exp with
         | E_lambda (var, expr) -> ({ exp = E_lambda (var, reduce_aux chans constr expr); loc = ast.loc})
         | E_ident _ -> ast
@@ -61,23 +63,33 @@ let rec reduce_aux (chans: channels) (constr: constructor list) (ast: expr): exp
                         let reduce_process expr : expr event =
                                 let chan = new_channel () in 
                                 let job expr : unit= sync (send chan (reduce_aux chans constr expr)) in 
-                                Thread.create job expr; receive chan
+                                Thread.create job expr; 
+                                receive chan
                         in
                         let events: expr event list = map reduce_process pl in
                         {exp = E_para (map (fun event -> sync event) events); loc = ast.loc}
                         
         | E_chan (var, expr) -> 
-                        let new_channel = create_channel var in
+                        let new_channel = Concurrent_Channel.create_channel var in
                         let reduced_expr = reduce_aux (new_channel :: chans) constr expr in
                         {exp = E_chan (var, reduced_expr); loc = ast.loc}
         | E_send (chan, msg, cont) ->
-                        Channel.send chans chan msg;
+                        let filter_rule = (fun c -> String.equal (Concurrent_Channel.name c) chan) in
+                        begin try 
+                                let chan = hd (filter filter_rule chans) in
+                                Concurrent_Channel.push chan msg
+                                with
+                                | Failure _ -> raise (NoSuchChannel chan)
+                        end;
                         reduce_aux chans constr cont
         | E_deliver (chan, var, expr) ->
-                        begin match deliver chans chan with
-                        | Some e -> reduce_aux chans constr (substitute_free_variable var e expr)
-                        | None -> ast (* TODO : mettre dans une file d'attente ?? *)
-                        end 
+                        let filter_rule = (fun c -> String.equal (Concurrent_Channel.name c) chan) in
+                        begin try 
+                                let chan = hd (filter filter_rule chans) in
+                                Concurrent_Channel.pull chan 
+                                with
+                                | Failure _ -> raise (NoSuchChannel chan)
+                        end
         | E_type (type_name, constructors, prog) -> 
                         let new_constrs = constructors @ constr in
                         { exp = E_type(type_name, constructors, reduce_aux chans new_constrs prog);

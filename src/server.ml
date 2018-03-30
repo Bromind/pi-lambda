@@ -38,9 +38,8 @@ let task_of_data producer data =
                 prod = producer
         }
         
-
 let consume_task task = 
-        let completed_task = task in (* TODO *)
+        let completed_task = task in (* TODO : reduce term *)
         output_string task.prod (task_completed_to_string completed_task)
 
 

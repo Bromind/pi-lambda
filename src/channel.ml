@@ -1,7 +1,17 @@
 open Ast
 open List
 open Mutex
+open Thread
 
+module type Channel = sig
+        type channel 
+        val create_channel : string -> channel
+        val push : channel -> Ast.expr -> unit
+        val pull : channel -> Ast.expr 
+        val name : channel -> string
+end
+
+module Concurrent_Channel : Channel = struct 
 type channel = {
         name: string ;
         queue: expr list ref ;
@@ -9,7 +19,11 @@ type channel = {
 }
 
 let create_channel n =
-        {name = n ; queue = ref []; m = create ()}
+        {
+                name = n ; 
+                queue = ref [];
+                m = Mutex.create ()
+        }
 
 let push (mp: channel) (message: expr): unit = 
         lock mp.m;
@@ -18,13 +32,17 @@ let push (mp: channel) (message: expr): unit =
         mp.queue := new_queue;
         unlock mp.m
 
-let pull mp = 
+let rec pull mp = 
         lock mp.m;
         match !(mp.queue) with
-        | [] -> None
+        | [] -> unlock mp.m;
+                yield ();
+                pull mp (* Nice that ocaml provide tail rec for free :-s *)
         | hd::tl -> mp.queue := tl; 
                 unlock mp.m;
-                Some hd
+                hd
+let name c = 
+        c.name
 
 (* TODO Use Set.Make (require to impl OrderedType for message_passing) *)
 type channels = channel list
@@ -39,7 +57,7 @@ let send (chans: channels) (var: string) (msg: expr): unit =
         with
         | Failure _ -> raise (NoSuchChannel var)
 
-let deliver (chans: channels) (chan_name: string): expr option =
+let deliver (chans: channels) (chan_name: string): expr =
         let filter_rule = (fun c -> String.equal c.name chan_name) in
         try 
                 let chan = hd (filter filter_rule chans) in
@@ -47,3 +65,4 @@ let deliver (chans: channels) (chan_name: string): expr option =
         with
         | Failure _ -> raise (NoSuchChannel chan_name)
 
+end
