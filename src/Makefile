@@ -1,4 +1,4 @@
-CMO=tree.cmo network_topology.cmo topology_config_parser.cmo config.cmo identifier.cmo channel.cmo pi_lambda_types.cmo constructor.cmo ast.cmo lexer.cmo typer.cmo parser.cmo interp.cmo 
+CMO=tree.cmo network_topology.cmo topology_config_parser.cmo config.cmo identifier.cmo channel.cmo pi_lambda_types.cmo constructor.cmo ast.cmo lexer.cmo typer.cmo parser.cmo tcp_channel.cmo interp.cmo 
 CMI=
 GENERATED=lexer.ml parser.ml parser.mli
 
