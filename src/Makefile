@@ -12,7 +12,7 @@ LEXER=ocamllex $(LFLAGS)
 PFLAGS=-v --dump --explain --graph
 PARSER=menhir $(PFLAGS)
 
-all: repl inter test config
+all: repl inter test config server
 
 repl: $(CMO) repl.cmo
 	$(COMPILER) -linkpkg -o $@ $(CLIBS) $(CMO) repl.cmo

@@ -6,6 +6,7 @@ To build:
  - ocamlc (tested version 4.04.2)
  - menhir (tested version 20171013)
  - ocamllex (tested version 4.04.2)
+ - yojson (tested version 1.4.1)
 It also uses `unix.cma` and `threads.cma` to build, which should be included in your ocaml install.
 
 To run: 
