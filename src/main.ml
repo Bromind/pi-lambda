@@ -9,6 +9,7 @@ open Typer
 
 let filename = ref "main.pil"
 let typing_only = ref false
+let show_ast = ref false
 
 let error_loc pos =
   let line = pos.pos_lnum in
@@ -32,7 +33,8 @@ let args =
         [
                 ("--version", Unit(print_version), "\tPrint version number and exit.");
                 ("--input", String(function s -> filename := s), "\tSpecify the input file.");
-                ("--type-only", Unit(fun _ -> typing_only := true), "\tStop the compilation process after the typing phase.")
+                ("--type-only", Unit(fun _ -> typing_only := true), "\tStop the compilation process after the typing phase.");
+                ("--show-ast", Unit(fun _ -> show_ast := true), "\tShow the AST of the input file and exit.")
         ]
 
 
@@ -47,6 +49,11 @@ let () =
         try
         let p = Parser.file Lexer.token buf in 
         close_in f;
+        let _ = if !show_ast
+        then
+                output_string stdout (string_of_ast p);
+                exit 0;
+        in
         let typed_p = type_pi_lambda_expr p in
         if not !typing_only
         then

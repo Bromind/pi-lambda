@@ -26,7 +26,7 @@
     + [ ] Merge Tdot & Tchan together ??
     + [ ] Pattern matching
 - [ ] Recursive functions
-- [ ] Add option : `--show-ast`
+- [✓] Add option : `--show-ast`
 - [ ] Change version name
 
 # release α-0.3 - An named release
