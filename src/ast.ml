@@ -102,3 +102,28 @@ let rec string_of_ast_aux (depth: bool list ) expr =
         sub_tree_string  
 
 let string_of_ast expr = string_of_ast_aux [] expr
+
+(** Display a term correspondign to the given expr. Contrary to `string_of_ast`, the string returned here is a valid term (i.e. should be parsable) *)
+let rec term_of_ast expr =
+        match expr.exp with
+        | E_lambda (i, e) ->
+                        "\\" ^ i ^ "->" ^ term_of_ast e
+        | E_ident (i) -> i
+        | E_app (e1, e2) -> "(" ^ term_of_ast e1 ^ ") (" ^ term_of_ast e2 ^ ")"
+        | E_para el ->
+                        let rec print_list l =
+                        match l with
+                        | [] -> ""
+                        | e :: [] -> term_of_ast e
+                        | e :: lt -> term_of_ast e ^ " || " ^ print_list lt
+                        in
+                        "[ " ^ print_list el ^ " ]"
+        | E_chan (i, e) ->
+                        "#" ^ i ^ ". " ^ term_of_ast e
+        | E_send (i, e1, e2) ->
+                        i ^ "[" ^ term_of_ast e1 ^ "]." ^ term_of_ast e2
+        | E_deliver (c, v, e) ->
+                        c ^ ", " ^ v ^ " > " ^ term_of_ast e
+        | E_type (type_name, constructors, e) ->
+                        "type " ^ type_name ^ string_of_constructor_list constructors ^ ". \n" ^ term_of_ast e
+        | E_match _ -> raise PatternMatchingNotImplemented
