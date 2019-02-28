@@ -12,14 +12,15 @@ type load = expr
 type producer = out_channel
 
 type task = {
-        id: int;
+        task_id: int;
+        server_id: int;
         load: load;
         env: environment;
         prod: producer;
 }
 
-let environment_of_string s = 
-        ()
+(** Associate idents to terms *)
+let environment_of_string s = () (* [] *)
 
 let load_of_string s =
         let buf = Lexing.from_string s in
@@ -27,7 +28,7 @@ let load_of_string s =
         ast
 
 let task_completed_to_string task = 
-        let json = `Assoc [ ("id", `Int task.id); ("load", `String (term_of_ast task.load))] in
+        let json = `Assoc [ ("task_id", `Int task.task_id); ("load", `String (term_of_ast task.load))] in
         Yojson.Basic.pretty_to_string json
 
 let task_of_data producer data = 
@@ -35,9 +36,11 @@ let task_of_data producer data =
         let json_task = json |> member "task" in
         let env = json_task |> member "environment" |> to_list |> List.map to_string |> environment_of_string in
         let payload = json_task |> member "payload" |> to_string |> load_of_string in
-        let id = json_task |> member "task_id" |> to_int in 
+        let task_id = json_task |> member "task_id" |> to_int in 
+        let server_id = json_task |> member "server_id" |> to_int in
         {
-                id = id;
+                server_id = server_id;
+                task_id = task_id;
                 load = payload;
                 env = env;
                 prod = producer

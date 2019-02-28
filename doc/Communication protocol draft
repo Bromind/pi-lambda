@@ -36,6 +36,7 @@ paylaods are exchanged in JSON format, on a single line.
 
 The JSON string contains the following elements:
 - At top level, a single `task` key associated to an object composed of:
+  + a `server_id`, an integer
   + a `task_id`, an integer
   + an `environment`, which associate all necessary free names of the term
   + the `payload`, a string of the term to compute, with special characters
@@ -49,4 +50,4 @@ III) Example
 The following JSON string represent the task with `task_id` 123 which reduces 
 the identity function (actually, there is nothing to do here).
 
-{"task": {"task_id": 123, "environment": [], "payload": "\\x.x" }}
+{"task": {"server_id": 12, "task_id": 123, "environment": [], "payload": "\\x.x" }}
