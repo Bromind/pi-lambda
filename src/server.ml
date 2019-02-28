@@ -26,10 +26,8 @@ let load_of_string s =
         let ast = Parser.file Lexer.token buf in
         ast
 
-let string_of_load load = ""
-
 let task_completed_to_string task = 
-        let json = `Assoc [ ("id", `Int task.id); ("load", `String (string_of_load task.load))] in
+        let json = `Assoc [ ("id", `Int task.id); ("load", `String (term_of_ast task.load))] in
         Yojson.Basic.pretty_to_string json
 
 let task_of_data producer data = 
