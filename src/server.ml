@@ -1,9 +1,14 @@
 open Yojson
 open Yojson.Basic.Util
 open Unix
+open Identifier
+open Ast
+open Lexing
+open Parser
+open Format
 
-type environment = unit
-type load = unit
+type environment = unit (* ident * expr list *)
+type load = expr
 type producer = out_channel
 
 type task = {
@@ -16,8 +21,10 @@ type task = {
 let environment_of_string s = 
         ()
 
-let load_of_string s = 
-        ()
+let load_of_string s =
+        let buf = Lexing.from_string s in
+        let ast = Parser.file Lexer.token buf in
+        ast
 
 let string_of_load load = ""
 
@@ -41,7 +48,6 @@ let task_of_data producer data =
 let consume_task task = 
         let completed_task = task in (* TODO : reduce term *)
         output_string task.prod (task_completed_to_string completed_task)
-
 
 let () = 
         let addr = ADDR_INET ((inet_addr_of_string "127.0.0.1"), 8888) in
