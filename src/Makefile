@@ -9,7 +9,7 @@ COMPILER=ocamlc $(CFLAGS)
 LFLAGS=
 LEXER=ocamllex $(LFLAGS)
 
-PFLAGS=-v --dump --explain --graph
+PFLAGS=-v --dump --explain --reference-graph
 PARSER=menhir $(PFLAGS)
 
 all: repl inter test
@@ -52,4 +52,4 @@ clean:
 	-ocamldep *.ml *.mli > .depend
 	@echo "Done"
 
-include .depend
+-include .depend
