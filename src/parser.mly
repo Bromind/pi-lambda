@@ -46,12 +46,17 @@
 %token LAMBDA CHAN DOT COMMA PARA LSB RSB GT LT EOF ARROW LPARENS RPARENS TYPE COLON BAR MATCH
 
 %start file
+%type <unit option> option(BAR) option(COLON) (* It's a bit stupid but okay *)
 %type <Ast.expr> file
 %type <Ast.expr> program
 %type <Ast.expr> parens_program
+%type <Ast.expr list> separated_nonempty_list(PARA,program)
 %type <Pi_lambda_types.pi_lambda_type> type_def
+%type <Pi_lambda_types.pi_lambda_type list> separated_nonempty_list(COMMA,type_def) loption(separated_nonempty_list(COMMA,type_def))
 %type <string -> Constructor.constructor> constructor
+%type <(string -> Constructor.constructor) list> separated_nonempty_list(BAR,constructor)
 %type <(Ast.expr * Ast.expr)> pattern
+%type <(Ast.expr * Ast.expr) list> list(pattern)
 
 %%
 
